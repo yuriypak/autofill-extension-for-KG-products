@@ -1,0 +1,26 @@
+{
+  "manifest_version": 3,
+  "name": "Registration Autofill (KG)",
+  "version": "1.2.0",
+  "description": "Автозаполнение всех шагов регистрации и апрув аппликации",
+  "permissions": ["clipboardRead"],
+  "icons": {
+    "16": "icon-16.png",
+    "48": "icon-48.png",
+    "128": "icon-128.png"
+  },
+  "content_scripts": [
+    {
+      "matches": ["http://localhost/*", "http://localhost:*/*", "http://*.localhost/*", "http://*.localhost:*/*", "http://*.docker/*", "https://*.docker/*", "https://*.doke.kg/*", "https://*.fino.kg/*"],
+      "js": ["image-data.js", "content.js"],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["test-image.jpg"],
+      "matches": ["http://localhost/*", "http://localhost:*/*", "http://*.localhost/*", "http://*.localhost:*/*", "http://*.docker/*", "https://*.docker/*", "https://*.doke.kg/*", "https://*.fino.kg/*"]
+    }
+  ]
+}
