@@ -2,187 +2,6 @@
 (function () {
   'use strict';
 
-  const ALLOWED_PHONE_CODES = [
-    '755',
-    '550',
-    '551',
-    '552',
-    '553',
-    '554',
-    '556',
-    '557',
-    '559',
-    '770',
-    '771',
-    '772',
-    '773',
-    '774',
-    '775',
-    '776',
-    '777',
-    '778',
-    '779',
-    '220',
-    '221',
-    '222',
-    '225',
-    '227',
-    '500',
-    '501',
-    '502',
-    '504',
-    '505',
-    '507',
-    '508',
-    '509'
-  ];
-
-  const PIN_DIGIT_POOL = '567892450122345012345678923450123423450123450123456789234';
-
-  const FIRST_NAMES = ['Александр', 'Мария', 'Дмитрий', 'Елена', 'Сергей', 'Анна', 'Иван', 'Ольга', 'Николай', 'Татьяна'];
-  const MIDDLE_NAMES = ['Александрович', 'Ивановна', 'Дмитриевич', 'Сергеевна', 'Николаевич', 'Петровна', 'Иванович', 'Олеговна'];
-  const LAST_NAMES = ['Иванов', 'Петрова', 'Смирнов', 'Кузнецова', 'Попов', 'Соколова', 'Лебедев', 'Новикова', 'Морозов', 'Волкова'];
-
-  const FIXED = {
-    password: 'Test12345',
-    smsCode: '0000',
-    socialFundCode: '000000',
-    street: 'Манаса проспект',
-    house: '1',
-    apartment: '13',
-    company: 'OOO',
-    income: '50000',
-    additionalIncome: '10000',
-    contactName: 'Матвей',
-    region: 'Баткенская область',
-    district: 'Кадамжайский район',
-    city: 'Айдаркен',
-    position: 'director',
-    dependents: '1',
-    ewallet: 'balance'
-  };
-
-  const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
-  const randomDigits = (length) => {
-    let out = '';
-    for (let i = 0; i < length; i++) out += Math.floor(Math.random() * 10);
-    return out;
-  };
-  const pad = (n) => String(n).padStart(2, '0');
-
-  function randomBirthDate() {
-    const minAge = 19;
-    const maxAge = 65;
-    const now = new Date();
-    const age = minAge + Math.floor(Math.random() * (maxAge - minAge + 1));
-    const year = now.getFullYear() - age;
-    const month = 1 + Math.floor(Math.random() * 12);
-    const day = 1 + Math.floor(Math.random() * 28);
-    return new Date(year, month - 1, day);
-  }
-
-  function formatDdMmYyyy(date, sep) {
-    return `${pad(date.getDate())}${sep}${pad(date.getMonth() + 1)}${sep}${date.getFullYear()}`;
-  }
-
-  function generatePin(birthDate) {
-    const gender = pick(['1', '2']);
-    const dob = formatDdMmYyyy(birthDate, '');
-    let last = '';
-    for (let i = 0; i < 5; i++) {
-      last += PIN_DIGIT_POOL[Math.floor(Math.random() * (PIN_DIGIT_POOL.length - 1))];
-    }
-    return `${gender}${dob}${last}`;
-  }
-
-  function generatePhone() {
-    return pick(ALLOWED_PHONE_CODES) + randomDigits(6);
-  }
-
-  function generatePassportNumber() {
-    return 'AC' + randomDigits(7);
-  }
-
-  function generatePassportAuthority() {
-    return 'МКК' + randomDigits(6);
-  }
-
-  function generatePassportIssueDate() {
-    const now = new Date();
-    const from = new Date(now.getFullYear() - 5, now.getMonth(), now.getDate()).getTime();
-    const ts = from + Math.random() * (now.getTime() - from);
-    return new Date(ts);
-  }
-
-  function translit(str) {
-    const map = {
-      а: 'a',
-      б: 'b',
-      в: 'v',
-      г: 'g',
-      д: 'd',
-      е: 'e',
-      ё: 'e',
-      ж: 'zh',
-      з: 'z',
-      и: 'i',
-      й: 'i',
-      к: 'k',
-      л: 'l',
-      м: 'm',
-      н: 'n',
-      о: 'o',
-      п: 'p',
-      р: 'r',
-      с: 's',
-      т: 't',
-      у: 'u',
-      ф: 'f',
-      х: 'h',
-      ц: 'c',
-      ч: 'ch',
-      ш: 'sh',
-      щ: 'sch',
-      ъ: '',
-      ы: 'y',
-      ь: '',
-      э: 'e',
-      ю: 'yu',
-      я: 'ya'
-    };
-    return str
-      .toLowerCase()
-      .split('')
-      .map((ch) => (map[ch] !== undefined ? map[ch] : ch))
-      .join('');
-  }
-
-  function generateClient() {
-    const firstName = pick(FIRST_NAMES);
-    const middleName = pick(MIDDLE_NAMES);
-    const lastName = pick(LAST_NAMES);
-    const birthDate = randomBirthDate();
-    const phone = generatePhone();
-    return {
-      firstName,
-      middleName,
-      lastName,
-      birthDate,
-      pin: generatePin(birthDate),
-      phone,
-      email: `${translit(firstName)}.${translit(lastName)}${randomDigits(5)}@gmail.com`,
-      password: FIXED.password,
-      smsCode: FIXED.smsCode,
-      socialFundCode: FIXED.socialFundCode,
-      passportNumber: generatePassportNumber(),
-      passportAuthority: generatePassportAuthority(),
-      passportIssueDate: formatDdMmYyyy(generatePassportIssueDate(), '.'),
-      contactName: FIXED.contactName,
-      contactPhone: '0' + generatePhone(),
-      walletNumber: phone
-    };
-  }
-
   const nativeInputSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
   const nativeTextareaSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value').set;
 
@@ -355,7 +174,7 @@
 
   async function uploadDocuments() {
     const token = getAuthToken();
-    if (!token) throw new Error('auth.token не найден в cookie');
+    if (!token) throw new Error('auth.token not found in cookie');
     const imageBlob = await getImageBlob();
     for (const [name, type] of Object.entries(DOCUMENT_TYPES)) {
       const formData = new FormData();
@@ -367,7 +186,7 @@
         body: formData,
         credentials: 'include'
       });
-      if (!response.ok) throw new Error(`Загрузка "${name}" не удалась: ${response.status}`);
+      if (!response.ok) throw new Error(`Upload "${name}" failed: ${response.status}`);
     }
     return true;
   }
@@ -638,8 +457,7 @@
       payer.focus();
       setValueNoBlur(payer, value);
       const suggestion = await waitFor(() => {
-        return Array.from(document.querySelectorAll('.tt-suggestion'))
-          .find((el) => isVisible(el) && (el.textContent || '').includes(value)) || null;
+        return Array.from(document.querySelectorAll('.tt-suggestion')).find((el) => isVisible(el) && (el.textContent || '').includes(value)) || null;
       }, 5000);
       if (suggestion) {
         suggestion.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
@@ -667,7 +485,7 @@
   async function runIncomingPaymentCrons() {
     for (const cronId of INCOMING_PAYMENT_CRON_IDS) {
       const response = await fetch(`/cron-jobs/run/${cronId}`, { credentials: 'include' });
-      if (!response.ok) throw new Error(`Крон ${cronId} вернул ${response.status}`);
+      if (!response.ok) throw new Error(`Cron ${cronId} returned ${response.status}`);
     }
   }
 
@@ -676,7 +494,7 @@
   async function runOutgoingCrons() {
     for (const cronId of OUTGOING_CRON_IDS) {
       const response = await fetch(`/cron-jobs/run/${cronId}`, { credentials: 'include' });
-      if (!response.ok) throw new Error(`Крон ${cronId} вернул ${response.status}`);
+      if (!response.ok) throw new Error(`Cron ${cronId} returned ${response.status}`);
     }
   }
 
@@ -687,10 +505,10 @@
       headers: { 'x-requested-with': 'XMLHttpRequest' },
       credentials: 'include'
     });
-    if (!response.ok) throw new Error(`Поиск клиента вернул ${response.status}`);
+    if (!response.ok) throw new Error(`Client search returned ${response.status}`);
     const data = await response.json();
     const client = data && data.results && data.results[0];
-    if (!client) throw new Error('Клиент по ИНН не найден');
+    if (!client) throw new Error('Client not found by PIN');
     return client;
   }
 
@@ -725,7 +543,7 @@
       body: new URLSearchParams(payload),
       credentials: 'include'
     });
-    if (!response.ok) throw new Error(`Создание платежа вернуло ${response.status}`);
+    if (!response.ok) throw new Error(`Payment creation returned ${response.status}`);
     await runIncomingPaymentCrons();
     return true;
   }
@@ -734,44 +552,48 @@
     const btn = document.querySelector('#save_btn');
     if (!btn || btn.dataset.cronWired) return;
     btn.dataset.cronWired = '1';
-    btn.addEventListener('click', (event) => {
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      const form = btn.closest('form') || document.querySelector('form');
-      (async () => {
-        try {
-          if (form) {
-            const body = new URLSearchParams(new FormData(form));
-            const action = form.getAttribute('action') || location.pathname;
-            const response = await fetch(action, { method: 'POST', body, credentials: 'include' });
-            if (!response.ok) throw new Error(`Сохранение платежа вернуло ${response.status}`);
-            await runIncomingPaymentCrons();
-            toast('Платёж сохранён, кроны запущены');
-            if (response.url) location.href = response.url;
-          } else {
-            await runIncomingPaymentCrons();
-            toast('Кроны запущены');
+    btn.addEventListener(
+      'click',
+      (event) => {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        const form = btn.closest('form') || document.querySelector('form');
+        (async () => {
+          try {
+            if (form) {
+              const body = new URLSearchParams(new FormData(form));
+              const action = form.getAttribute('action') || location.pathname;
+              const response = await fetch(action, { method: 'POST', body, credentials: 'include' });
+              if (!response.ok) throw new Error(`Payment save returned ${response.status}`);
+              await runIncomingPaymentCrons();
+              toast('Payment saved, crons started');
+              if (response.url) location.href = response.url;
+            } else {
+              await runIncomingPaymentCrons();
+              toast('Crons started');
+            }
+          } catch (err) {
+            console.error('[Autofill] Save/cron error:', err);
+            toast('Error: ' + (err && err.message ? err.message : err), true);
           }
-        } catch (err) {
-          console.error('[Autofill] Ошибка сохранения/кронов:', err);
-          toast('Ошибка: ' + (err && err.message ? err.message : err), true);
-        }
-      })();
-    }, true);
+        })();
+      },
+      true
+    );
   }
 
   function getAction() {
     const host = location.hostname;
     if (!/(^|\.)(doke|fino)\.kg$/i.test(host) && !host.includes('localhost') && !host.endsWith('.docker')) return null;
     if (isErpApplicationTodo()) {
-      return { label: 'Апрув аппликации', run: approveErpApplication };
+      return { label: 'Approve application', run: approveErpApplication };
     }
     if (isErpPaymentAdd()) {
-      return { label: 'Заполнить платёж', run: fillPaymentAdd };
+      return { label: 'Fill payment', run: fillPaymentAdd };
     }
     const step = detectStep();
     if (step) {
-      return { label: 'Заполнить шаг', run: () => step.fill(generateClient()) };
+      return { label: 'Fill step', run: () => step.fill(generateClient()) };
     }
     return null;
   }
@@ -779,14 +601,14 @@
   function runCurrentAction() {
     const action = getAction();
     if (!action) {
-      toast('Действие недоступно на этой странице', true);
+      toast('Action not available on this page', true);
       return;
     }
     Promise.resolve(action.run())
-      .then(() => toast('Готово'))
+      .then(() => toast('Done'))
       .catch((err) => {
-        console.error('[Autofill] Ошибка при выполнении действия:', err);
-        toast('Ошибка: ' + (err && err.message ? err.message : err), true);
+        console.error('[Autofill] Action error:', err);
+        toast('Error: ' + (err && err.message ? err.message : err), true);
       });
   }
 
@@ -869,15 +691,15 @@
     });
 
     const title = document.createElement('div');
-    title.textContent = 'Создать платёж';
+    title.textContent = 'Create incoming payment';
     Object.assign(title.style, { color: '#fff', fontSize: '13px', fontWeight: '600', marginBottom: '2px' });
 
     const innInput = document.createElement('input');
     innInput.type = 'text';
-    innInput.placeholder = 'ИНН';
+    innInput.placeholder = 'PIN';
     const amountInput = document.createElement('input');
     amountInput.type = 'text';
-    amountInput.placeholder = 'Сумма';
+    amountInput.placeholder = 'Amount';
     [innInput, amountInput].forEach((input) => {
       Object.assign(input.style, {
         padding: '6px 8px',
@@ -889,7 +711,7 @@
     });
 
     const submit = document.createElement('button');
-    submit.textContent = 'Создать платёж';
+    submit.textContent = 'Create payment';
     Object.assign(submit.style, {
       padding: '8px',
       borderRadius: '6px',
@@ -905,25 +727,25 @@
       const inn = innInput.value.trim();
       const amount = amountInput.value.trim();
       if (!inn || !amount) {
-        toast('Укажите ИНН и сумму', true);
+        toast('Enter PIN and amount', true);
         return;
       }
       submit.disabled = true;
-      submit.textContent = 'Создаём…';
+      submit.textContent = 'Creating…';
       createIncomingPaymentByInn(inn, amount)
-        .then(() => toast('Платёж создан, кроны запущены'))
+        .then(() => toast('Payment created, crons started'))
         .catch((err) => {
-          console.error('[Autofill] Ошибка создания платежа:', err);
-          toast('Ошибка: ' + (err && err.message ? err.message : err), true);
+          console.error('[Autofill] Payment creation error:', err);
+          toast('Error: ' + (err && err.message ? err.message : err), true);
         })
         .finally(() => {
           submit.disabled = false;
-          submit.textContent = 'Создать платёж';
+          submit.textContent = 'Create incoming payment';
         });
     });
 
     const outgoingBtn = document.createElement('button');
-    outgoingBtn.textContent = 'запуск outgoing крон';
+    outgoingBtn.textContent = 'Run outgoing crons';
     Object.assign(outgoingBtn.style, {
       padding: '8px',
       borderRadius: '6px',
@@ -936,16 +758,16 @@
     });
     outgoingBtn.addEventListener('click', () => {
       outgoingBtn.disabled = true;
-      outgoingBtn.textContent = 'Запускаем…';
+      outgoingBtn.textContent = 'Running…';
       runOutgoingCrons()
-        .then(() => toast('Outgoing кроны запущены'))
+        .then(() => toast('Outgoing crons started'))
         .catch((err) => {
-          console.error('[Autofill] Ошибка outgoing кронов:', err);
-          toast('Ошибка: ' + (err && err.message ? err.message : err), true);
+          console.error('[Autofill] Outgoing cron error:', err);
+          toast('Error: ' + (err && err.message ? err.message : err), true);
         })
         .finally(() => {
           outgoingBtn.disabled = false;
-          outgoingBtn.textContent = 'запуск outgoing крон';
+          outgoingBtn.textContent = 'Run outgoing crons';
         });
     });
 

@@ -1,9 +1,24 @@
 {
   "manifest_version": 3,
   "name": "Registration Autofill (KG)",
-  "version": "1.2.0",
-  "description": "Автозаполнение всех шагов регистрации и апрув аппликации",
-  "permissions": ["clipboardRead"],
+  "version": "1.4.0",
+  "description": "Registration autofill, application approval and payments for doke.kg / fino.kg",
+  "permissions": ["clipboardRead", "cookies", "tabs"],
+  "host_permissions": [
+    "http://localhost/*",
+    "http://localhost:*/*",
+    "http://*.docker/*",
+    "https://*.doke.kg/*",
+    "https://*.fino.kg/*"
+  ],
+  "action": {
+    "default_popup": "registration.html",
+    "default_icon": {
+      "16": "icon-16.png",
+      "48": "icon-48.png",
+      "128": "icon-128.png"
+    }
+  },
   "icons": {
     "16": "icon-16.png",
     "48": "icon-48.png",
@@ -11,8 +26,17 @@
   },
   "content_scripts": [
     {
-      "matches": ["http://localhost/*", "http://localhost:*/*", "http://*.localhost/*", "http://*.localhost:*/*", "http://*.docker/*", "https://*.docker/*", "https://*.doke.kg/*", "https://*.fino.kg/*"],
-      "js": ["image-data.js", "content.js"],
+      "matches": [
+        "http://localhost/*",
+        "http://localhost:*/*",
+        "http://*.localhost/*",
+        "http://*.localhost:*/*",
+        "http://*.docker/*",
+        "https://*.docker/*",
+        "https://*.doke.kg/*",
+        "https://*.fino.kg/*"
+      ],
+      "js": ["generateData.js", "image-data.js", "content.js"],
       "run_at": "document_idle",
       "all_frames": false
     }
@@ -20,7 +44,16 @@
   "web_accessible_resources": [
     {
       "resources": ["test-image.jpg"],
-      "matches": ["http://localhost/*", "http://localhost:*/*", "http://*.localhost/*", "http://*.localhost:*/*", "http://*.docker/*", "https://*.docker/*", "https://*.doke.kg/*", "https://*.fino.kg/*"]
+      "matches": [
+        "http://localhost/*",
+        "http://localhost:*/*",
+        "http://*.localhost/*",
+        "http://*.localhost:*/*",
+        "http://*.docker/*",
+        "https://*.docker/*",
+        "https://*.doke.kg/*",
+        "https://*.fino.kg/*"
+      ]
     }
   ]
 }

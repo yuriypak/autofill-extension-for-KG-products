@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="UTF-8" />
+<style>
+  body{font-family:sans-serif;width:280px;margin:0;padding:14px;background:#1f2d3d;color:#fff;font-size:13px}
+  h1{font-size:14px;margin:0 0 10px}
+  label{display:block;margin:8px 0 3px;color:#b9c6d3}
+  select{width:100%;box-sizing:border-box;padding:6px 8px;border-radius:6px;border:1px solid #3a4a5d;background:#fff;color:#111;font-size:13px}
+  input[type=range]{width:100%;box-sizing:border-box;margin:4px 0;padding:0}
+  input[type=number]{width:100%;box-sizing:border-box;padding:6px 8px;border-radius:6px;border:1px solid #3a4a5d;background:#fff;color:#111;font-size:13px}
+  button{width:100%;margin-top:12px;padding:9px;border:none;border-radius:6px;background:#2d6cdf;color:#fff;font-weight:600;cursor:pointer}
+  button:disabled{opacity:.6}
+  #status{margin-top:10px;min-height:16px;color:#ffd166;white-space:pre-wrap}
+  #creds{margin-top:10px;display:none;background:#16212e;border-radius:6px;padding:8px}
+  #creds div{display:flex;justify-content:space-between;gap:8px;padding:2px 0}
+  #creds b{color:#7fd1ae;user-select:all}
+</style></head><body>
+<h1>Client registration</h1>
+<label>Product</label>
+<select id="product"><option value="doke-kg">doke-kg</option><option value="fino-kg">fino-kg</option></select>
+<label>Environment</label>
+<select id="environment">
+  <option value="" selected></option>
+  <option value="staging">staging</option><option value="staging1">staging1</option>
+  <option value="staging2">staging2</option><option value="staging3">staging3</option>
+  <option value="staging4">staging4</option><option value="staging5">staging5</option>
+  <option value="staging6">staging6</option><option value="development">development (localhost)</option>
+</select>
+<label>Register up to step</label>
+<select id="step">
+  <option value="step2">Step 2</option><option value="step3">Step 3</option><option value="step4">Step 4 (Biometry)</option>
+  <option value="socialFund">Social fund</option><option value="step6">Step 6</option>
+  <option value="consideration">Consideration type(Increase, Decrease)</option><option value="signing">Signing agreement</option>
+  <option value="createApplication">Create application</option>
+</select>
+<div id="creditOptionRow" style="display:none">
+<label>Credit option</label>
+<select id="creditOption"><option value="withInsurance">With insurance</option><option value="withoutInsurance">Without insurance</option><option value="withGuarantor">With guarantor</option></select>
+</div>
+<div id="amountTermRow" style="display:none">
+<label>Loan amount: <span id="amount-val">10000</span> KGS</label>
+<input type="range" id="amount" min="2000" max="70000" step="500" value="10000" />
+<label>Term: <span id="term-val">30</span> days</label>
+<input type="range" id="term" min="15" max="30" step="1" value="30" />
+</div>
+<label>Update limit model (optional)</label>
+<input type="number" id="limitManual" placeholder="e.g. 50000" />
+<button id="run">Register</button>
+<button id="applyLimit" style="background:#8e44ad">Apply limit only</button>
+<div id="status"></div>
+<div id="creds">
+  <div><span>PIN</span><b id="cred-pin"></b></div>
+  <div><span>Email</span><b id="cred-email"></b></div>
+  <div><span>Password</span><b id="cred-password"></b></div>
+  <div><span>Phone</span><b id="cred-phone"></b></div>
+</div>
+<script src="generateData.js"></script>
+<script src="image-data.js"></script>
+<script src="iobb-data.js"></script>
+<script src="registration.js"></script>
+</body></html>
