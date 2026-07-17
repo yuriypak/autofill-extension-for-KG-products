@@ -137,6 +137,7 @@ async function uploadAndSendVideo(apiBase, token) {
 
 async function runFlow(p, setStatus) {
   const { frontend, api: apiBase, erp } = bases(p.product, p.environment);
+  await chrome.cookies.set({ url: frontend, name: 'qa-mode', value: 'true' });
   const c = generateClient();
   const api = makeApi(apiBase);
   const step = p.step;
