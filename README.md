@@ -77,4 +77,3 @@
 - `localhost`, `*.localhost` (любой порт)
 - `*.docker` (напр. `erp.doke.kg.docker`, `erp.fino.kg.docker`)
 - `*.doke.kg`, `*.fino.kg` (staging и т.п., включая `offline.*` и `erp.*`)
-

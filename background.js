@@ -80,7 +80,9 @@ function makeApi(apiBase) {
     const res = await fetch(apiBase + path, { method, headers, body });
     if (!res.ok) {
       let t = '';
-      try { t = await res.text(); } catch (e) {}
+      try {
+        t = await res.text();
+      } catch (e) {}
       throw new Error(`${method} ${path} → ${res.status} ${t.slice(0, 140)}`);
     }
     const ct = res.headers.get('content-type') || '';
@@ -88,7 +90,12 @@ function makeApi(apiBase) {
     if (ct.includes('json') && text) return JSON.parse(text);
     return text;
   }
-  return { req, setToken: (t) => { token = t; } };
+  return {
+    req,
+    setToken: (t) => {
+      token = t;
+    }
+  };
 }
 
 async function imageBlob() {

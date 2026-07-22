@@ -1,7 +1,9 @@
 /* eslint-disable */
 'use strict';
 
-const setStatus = (t) => { document.getElementById('status').textContent = t; };
+const setStatus = (t) => {
+  document.getElementById('status').textContent = t;
+};
 
 function showCreds(client) {
   if (!client) return;
@@ -20,8 +22,10 @@ chrome.storage.local.get(['lastStatus', 'creds'], (st) => {
 chrome.runtime.onMessage.addListener((msg) => {
   if (!msg) return;
   if (msg.type === 'status') setStatus(msg.text);
-  else if (msg.type === 'done') { showCreds(msg.client); setStatus('Done. Opened in a new tab.'); }
-  else if (msg.type === 'error') setStatus('Error: ' + msg.message);
+  else if (msg.type === 'done') {
+    showCreds(msg.client);
+    setStatus('Done. Opened in a new tab.');
+  } else if (msg.type === 'error') setStatus('Error: ' + msg.message);
 });
 
 document.getElementById('run').addEventListener('click', () => {
@@ -60,8 +64,12 @@ document.getElementById('applyLimit').addEventListener('click', () => {
 
 const amountEl = document.getElementById('amount');
 const termEl = document.getElementById('term');
-amountEl.addEventListener('input', () => { document.getElementById('amount-val').textContent = amountEl.value; });
-termEl.addEventListener('input', () => { document.getElementById('term-val').textContent = termEl.value; });
+amountEl.addEventListener('input', () => {
+  document.getElementById('amount-val').textContent = amountEl.value;
+});
+termEl.addEventListener('input', () => {
+  document.getElementById('term-val').textContent = termEl.value;
+});
 
 const stepEl = document.getElementById('step');
 function syncCreditOptionVisibility() {

@@ -195,6 +195,28 @@
     return true;
   }
 
+  async function uploadVideo() {
+    const token = getAuthToken();
+    if (!token) throw new Error('auth.token not found in cookie');
+    const base = getApiBase();
+    const chooseRes = await fetch(base + '/web/private/client/verification/select?option=video', {
+      headers: { Authorization: 'Bearer ' + token },
+      credentials: 'include'
+    });
+    if (!chooseRes.ok) throw new Error('Select video verification → ' + chooseRes.status);
+    const videoBlob = await (await fetch(chrome.runtime.getURL('test-video.webm'))).blob();
+    const formData = new FormData();
+    formData.append('8', videoBlob, 'blob');
+    const response = await fetch(base + '/web/private/client/document/video-file-upload', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + token },
+      body: formData,
+      credentials: 'include'
+    });
+    if (!response.ok) throw new Error(`Video upload failed: ${response.status}`);
+    return true;
+  }
+
   async function uploadDocumentsOffline() {
     const imageBlob = await getImageBlob();
     const inputIds = ['id_document_input_front', 'id_document_input_back', 'id_document_input_selfie'];
@@ -325,6 +347,14 @@
         location.reload();
       }
     },
+    videoCapture: {
+      match: (path) => /video-capture/.test(path),
+      loadingLabel: 'Uploading video…',
+      fill: async () => {
+        await uploadVideo();
+        location.reload();
+      }
+    },
     step6: {
       match: (path) => /step6/.test(path),
       fill: async (c) => {
@@ -337,6 +367,51 @@
       match: (path) => /social-fund/.test(path),
       fill: (c) => {
         fillInput('input_sms_code', c.socialFundCode);
+      }
+    },
+    creditOptionInsurance: {
+      match: (path) => /\/ct\/ins$/.test(path),
+      fill: async (c) => {
+        clickTestId('btn_get_sms');
+        await waitFor(() => {
+          const el = byTestId('input_sms_code');
+          return el && isVisible(el) ? el : null;
+        }, 5000);
+        fillInput('input_sms_code', c.smsCode);
+        checkCheckbox('checkbox_accept_attorney_agreement');
+        checkCheckbox('checkbox_accept_insurance_agreement');
+        checkCheckbox('checkbox_accept_insurance_policy');
+        checkCheckbox('checkbox_accept_insurance_processing');
+        checkCheckbox('checkbox_accept_solvency_consent');
+        checkCheckbox('checkbox_accept_loan_default_acknowledgement');
+      }
+    },
+    creditOptionGuarantor: {
+      match: (path) => /\/ct\/gr$/.test(path),
+      fill: async (c) => {
+        clickTestId('btn_get_sms');
+        await waitFor(() => {
+          const el = byTestId('input_sms_code');
+          return el && isVisible(el) ? el : null;
+        }, 5000);
+        fillInput('input_sms_code', c.smsCode);
+        checkCheckbox('checkbox_accept_attorney_agreement');
+        checkCheckbox('checkbox_accept_solvency_consent');
+        checkCheckbox('checkbox_accept_loan_default_acknowledgement');
+      }
+    },
+    creditOptionWithoutInsurance: {
+      match: (path) => /\/ct\/wo-ins$/.test(path),
+      fill: async (c) => {
+        clickTestId('btn_get_sms');
+        await waitFor(() => {
+          const el = byTestId('input_sms_code');
+          return el && isVisible(el) ? el : null;
+        }, 5000);
+        fillInput('input_sms_code', c.smsCode);
+        checkCheckbox('checkbox_accept_solvency_consent');
+        checkCheckbox('checkbox_accept_attorney_agreement');
+        checkCheckbox('checkbox_accept_loan_default_acknowledgement');
       }
     }
   };
@@ -586,8 +661,11 @@
     );
   }
 
+  const BLOCKED_HOSTS = ['doke.kg', 'fino.kg', 'erp.doke.kg', 'erp.fino.kg'];
+
   function getAction() {
     const host = location.hostname;
+    if (BLOCKED_HOSTS.includes(host)) return null;
     if (!/(^|\.)(doke|fino)\.kg$/i.test(host) && !host.includes('localhost') && !host.endsWith('.docker')) return null;
     if (isErpApplicationTodo()) {
       return { label: 'Approve application', run: approveErpApplication };
@@ -597,7 +675,11 @@
     }
     const step = detectStep();
     if (step) {
-      return { label: 'Fill step', run: () => step.fill(generateClient()) };
+      return {
+        label: 'Fill step',
+        loadingLabel: step.loadingLabel || 'Filling…',
+        run: () => step.fill(generateClient())
+      };
     }
     return null;
   }
@@ -608,15 +690,36 @@
       toast('Action not available on this page', true);
       return;
     }
+    const btn = document.getElementById('autofill-registration-btn');
+    const prevLabel = btn ? btn.textContent : '';
+    if (btn) {
+      btn.disabled = true;
+      btn.style.opacity = '0.6';
+      btn.style.cursor = 'default';
+      btn.textContent = action.loadingLabel || 'Working…';
+    }
+    const loader = toast(action.loadingLabel || 'Working…', false, true);
     Promise.resolve(action.run())
-      .then(() => toast('Done'))
+      .then(() => {
+        loader.remove();
+        toast('Done');
+      })
       .catch((err) => {
         console.error('[Autofill] Action error:', err);
+        loader.remove();
         toast('Error: ' + (err && err.message ? err.message : err), true);
+      })
+      .finally(() => {
+        if (btn) {
+          btn.disabled = false;
+          btn.style.opacity = '1';
+          btn.style.cursor = 'pointer';
+          btn.textContent = prevLabel;
+        }
       });
   }
 
-  function toast(message, isError) {
+  function toast(message, isError, persist) {
     const el = document.createElement('div');
     el.textContent = message;
     Object.assign(el.style, {
@@ -629,15 +732,17 @@
       color: '#fff',
       fontFamily: 'sans-serif',
       fontSize: '13px',
-      background: isError ? '#c0392b' : '#27ae60',
+      background: isError ? '#c0392b' : persist ? '#2d6cdf' : '#27ae60',
       boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
       transition: 'opacity 0.3s'
     });
     document.body.appendChild(el);
+    if (persist) return el;
     setTimeout(() => {
       el.style.opacity = '0';
       setTimeout(() => el.remove(), 300);
     }, 1800);
+    return el;
   }
 
   function injectButton() {
