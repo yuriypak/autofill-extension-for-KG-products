@@ -666,7 +666,10 @@
   function getAction() {
     const host = location.hostname;
     if (BLOCKED_HOSTS.includes(host)) return null;
-    if (!/(^|\.)(doke|fino)\.kg$/i.test(host) && !host.includes('localhost') && !host.endsWith('.docker')) return null;
+    const isLocal = host.includes('localhost') || host.endsWith('.docker');
+    const isKgProduct = /(^|\.)(doke|fino)\.kg$/i.test(host);
+    if (!isLocal && !isKgProduct) return null;
+    if (isKgProduct && !/(^|\.)staging\d*\.(doke|fino)\.kg$/i.test(host)) return null;
     if (isErpApplicationTodo()) {
       return { label: 'Approve application', run: approveErpApplication };
     }
