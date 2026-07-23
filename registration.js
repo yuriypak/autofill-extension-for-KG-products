@@ -14,9 +14,15 @@ function showCreds(client) {
   document.getElementById('creds').style.display = 'block';
 }
 
-chrome.storage.local.get(['lastStatus', 'creds'], (st) => {
+chrome.storage.local.get(['lastStatus', 'creds', 'erpApiToken'], (st) => {
   if (st.lastStatus) setStatus(st.lastStatus);
   if (st.creds) showCreds(st.creds);
+  if (st.erpApiToken) document.getElementById('erpApiToken').value = st.erpApiToken;
+});
+
+const erpApiTokenEl = document.getElementById('erpApiToken');
+erpApiTokenEl.addEventListener('input', () => {
+  chrome.storage.local.set({ erpApiToken: erpApiTokenEl.value.trim() });
 });
 
 chrome.runtime.onMessage.addListener((msg) => {

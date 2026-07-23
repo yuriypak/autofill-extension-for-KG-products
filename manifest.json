@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Registration Autofill (KG)",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "description": "Registration autofill, application approval and payments for doke.kg / fino.kg",
   "permissions": ["clipboardRead", "cookies", "tabs", "storage"],
   "host_permissions": ["http://localhost/*", "http://localhost:*/*", "http://*.docker/*", "https://*.doke.kg/*", "https://*.fino.kg/*"],

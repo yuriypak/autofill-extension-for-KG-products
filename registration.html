@@ -7,6 +7,7 @@
   select{width:100%;box-sizing:border-box;padding:6px 8px;border-radius:6px;border:1px solid #3a4a5d;background:#fff;color:#111;font-size:13px}
   input[type=range]{width:100%;box-sizing:border-box;margin:4px 0;padding:0}
   input[type=number]{width:100%;box-sizing:border-box;padding:6px 8px;border-radius:6px;border:1px solid #3a4a5d;background:#fff;color:#111;font-size:13px}
+  input[type=text]{width:100%;box-sizing:border-box;padding:6px 8px;border-radius:6px;border:1px solid #3a4a5d;background:#fff;color:#111;font-size:13px}
   button{width:100%;margin-top:12px;padding:9px;border:none;border-radius:6px;background:#2d6cdf;color:#fff;font-weight:600;cursor:pointer}
   button:disabled{opacity:.6}
   #status{margin-top:10px;min-height:16px;color:#ffd166;white-space:pre-wrap}
@@ -44,6 +45,8 @@
 </div>
 <label>Update limit model (optional)</label>
 <input type="number" id="limitManual" placeholder="e.g. 50000" />
+<label>ERP API token</label>
+<input type="text" id="erpApiToken" placeholder="required for ERP /api/ calls" />
 <button id="run">Register</button>
 <button id="applyLimit" style="background:#8e44ad">Apply limit only</button>
 <div id="status"></div>

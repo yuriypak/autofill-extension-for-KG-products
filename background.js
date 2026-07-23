@@ -117,10 +117,16 @@ async function uploadPhotos(apiBase, token) {
   }
 }
 
-const ERP_API_TOKEN = 'letsgotothegrea1';
+function getErpApiToken() {
+  return new Promise((resolve) => {
+    chrome.storage.local.get('erpApiToken', (res) => resolve((res && res.erpApiToken) || ''));
+  });
+}
 
 async function getClientVerificationLimit(erpBase) {
-  const res = await fetch(erpBase + '/api/settings/client_verification?token=' + ERP_API_TOKEN, { credentials: 'include' });
+  const token = await getErpApiToken();
+  if (!token) throw new Error('ERP API token not set (open the extension popup and save it)');
+  const res = await fetch(erpBase + '/api/settings/client_verification?token=' + encodeURIComponent(token), { credentials: 'include' });
   if (!res.ok) throw new Error('Get verification limit → ' + res.status);
   const data = await res.json();
   return parseInt(data.data.client_verification_limit, 10);
@@ -357,8 +363,36 @@ async function handleApplyLimit(params) {
   }
 }
 
-chrome.runtime.onMessage.addListener((msg) => {
+async function getRecoveryCode(erpBase, email) {
+  const searchRes = await fetch(`${erpBase}/clients/searchByTerm?search=${encodeURIComponent(email)}`, {
+    headers: { 'x-requested-with': 'XMLHttpRequest' },
+    credentials: 'include'
+  });
+  if (!searchRes.ok) throw new Error('ERP client search → ' + searchRes.status + ' (are you logged into ERP?)');
+  const data = await searchRes.json();
+  const client = data && data.results && data.results[0];
+  if (!client) throw new Error('Client not found in ERP by email');
+  const clientId = client.clientId;
+  const recoverPasswordRegex = /временный пароль.*?:\s*(\d{4})(?!\d)/i;
+  for (let attempt = 0; attempt < 6; attempt++) {
+    const commRes = await fetch(`${erpBase}/clients/communication/${clientId}`, { credentials: 'include' });
+    if (!commRes.ok) throw new Error('ERP communication → ' + commRes.status);
+    const text = await commRes.text();
+    const match = text.match(recoverPasswordRegex);
+    if (match) return match[1];
+    await delay(1500);
+  }
+  throw new Error('Recovery code not found in communications');
+}
+
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (!msg) return;
   if (msg.action === 'register') handleRegister(msg.params);
   else if (msg.action === 'applyLimit') handleApplyLimit(msg.params);
+  else if (msg.action === 'getRecoveryCode') {
+    getRecoveryCode(msg.erpBase, msg.email)
+      .then((code) => sendResponse({ ok: true, code }))
+      .catch((err) => sendResponse({ ok: false, error: err && err.message ? err.message : String(err) }));
+    return true;
+  }
 });

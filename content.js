@@ -217,6 +217,70 @@
     return true;
   }
 
+  const STUB_RECAPTCHA_TOKEN = 'qa-extension-stub-token';
+  const RECOVERY_NEW_PASSWORD = 'Test12345';
+  const CHANGE_PASSWORD_FLAG = 'qa-recover-change-pass';
+  const getErpBase = () => `${location.protocol}//erp.${location.hostname}`;
+
+  function fetchRecoveryCode(erpBase, email) {
+    return new Promise((resolve, reject) => {
+      chrome.runtime.sendMessage({ action: 'getRecoveryCode', erpBase, email }, (res) => {
+        if (chrome.runtime.lastError) return reject(new Error(chrome.runtime.lastError.message));
+        if (!res || !res.ok) return reject(new Error(res && res.error ? res.error : 'No response from background'));
+        resolve(res.code);
+      });
+    });
+  }
+
+  async function runPasswordRecovery(email) {
+    const res = await fetch(getApiBase() + '/web/public/client/recover/password', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json;charset=UTF-8' },
+      body: JSON.stringify({ subject: email, token: STUB_RECAPTCHA_TOKEN }),
+      credentials: 'include'
+    });
+    if (res.status === 429) throw new Error('Too many requests, please wait');
+    const text = await res.text();
+    let body = {};
+    try {
+      body = text ? JSON.parse(text) : {};
+    } catch (e) {}
+    if (!res.ok || (body.data && body.data.error)) {
+      throw new Error('Recover request failed: ' + (body && body.message ? body.message : res.status));
+    }
+    const code = await fetchRecoveryCode(getErpBase(), email);
+    const filledLogin = fillInput('input_login', email);
+    const filledPassword = fillInput('input_password', code);
+    if (filledLogin && filledPassword) {
+      try {
+        sessionStorage.setItem(CHANGE_PASSWORD_FLAG, '1');
+      } catch (e) {}
+      await delay(400);
+      clickTestId('btn_submit');
+    }
+    return { code, submitted: filledLogin && filledPassword };
+  }
+
+  async function autoFillChangePassword() {
+    if (!/\/profile\/change-password/.test(location.pathname)) return;
+    let pending;
+    try {
+      pending = sessionStorage.getItem(CHANGE_PASSWORD_FLAG);
+    } catch (e) {}
+    if (pending !== '1') return;
+    const newField = byTestId('input_new_password');
+    const repeatField = byTestId('input_repeat_password');
+    if (!newField || !repeatField) return;
+    try {
+      sessionStorage.removeItem(CHANGE_PASSWORD_FLAG);
+    } catch (e) {}
+    fillInput('input_new_password', RECOVERY_NEW_PASSWORD);
+    fillInput('input_repeat_password', RECOVERY_NEW_PASSWORD);
+    await delay(500);
+    clickTestId('btn_submit');
+    toast('New password set: ' + RECOVERY_NEW_PASSWORD);
+  }
+
   async function uploadDocumentsOffline() {
     const imageBlob = await getImageBlob();
     const inputIds = ['id_document_input_front', 'id_document_input_back', 'id_document_input_selfie'];
@@ -577,6 +641,50 @@
     }
   }
 
+  function getErpApiToken() {
+    return new Promise((resolve) => {
+      chrome.storage.local.get('erpApiToken', (res) => resolve((res && res.erpApiToken) || ''));
+    });
+  }
+  const DUE_DAYS_CRON_ID = 29;
+
+  function isoToDdMmYyyyPlusDays(isoDate, days) {
+    const datePart = String(isoDate).slice(0, 10);
+    const [y, m, d] = datePart.split('-').map(Number);
+    const dt = new Date(Date.UTC(y, m - 1, d));
+    dt.setUTCDate(dt.getUTCDate() + Number(days));
+    const dd = String(dt.getUTCDate()).padStart(2, '0');
+    const mm = String(dt.getUTCMonth() + 1).padStart(2, '0');
+    return `${dd}.${mm}.${dt.getUTCFullYear()}`;
+  }
+
+  async function getLoanEndDate(loanId) {
+    const token = await getErpApiToken();
+    if (!token) throw new Error('ERP API token not set (open the extension popup and save it)');
+    const res = await fetch(`/api/loans/${encodeURIComponent(loanId)}?token=${encodeURIComponent(token)}`, { credentials: 'include' });
+    if (!res.ok) throw new Error(`Loan ${loanId} request → ${res.status}`);
+    const data = await res.json();
+    const endDate = data && data.data && data.data.endDate;
+    if (!endDate) throw new Error('endDate not found for loan ' + loanId);
+    return endDate;
+  }
+
+  async function setLoanOverdue(loanId, days) {
+    const endDate = await getLoanEndDate(loanId);
+    const currentDate = isoToDdMmYyyyPlusDays(endDate, days);
+    const body = new URLSearchParams({
+      title: 'Invoices: notify due days',
+      action: `invoices notify-due-days --current-date=${currentDate} --loan=${loanId} --force=1`,
+      cronExpr: '*/10 * * * *',
+      isEnabled: '1'
+    });
+    const editRes = await fetch(`/cron-jobs/edit/${DUE_DAYS_CRON_ID}`, { method: 'POST', body, credentials: 'include' });
+    if (!editRes.ok) throw new Error(`Cron edit → ${editRes.status}`);
+    const runRes = await fetch(`/cron-jobs/run/${DUE_DAYS_CRON_ID}`, { credentials: 'include' });
+    if (!runRes.ok) throw new Error(`Cron run → ${runRes.status}`);
+    return currentDate;
+  }
+
   const isErpHost = () => /^erp\./i.test(location.hostname);
 
   async function searchClientByInn(inn) {
@@ -788,7 +896,7 @@
     panel.id = 'erp-payment-panel';
     Object.assign(panel.style, {
       position: 'fixed',
-      bottom: '20px',
+      bottom: '190px',
       left: '20px',
       zIndex: '2147483647',
       display: 'flex',
@@ -892,12 +1000,193 @@
     if (panel) panel.remove();
   }
 
+  function injectOverduePanel() {
+    if (document.getElementById('erp-overdue-panel')) return;
+    const panel = document.createElement('div');
+    panel.id = 'erp-overdue-panel';
+    Object.assign(panel.style, {
+      position: 'fixed',
+      bottom: '20px',
+      left: '20px',
+      zIndex: '2147483647',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '6px',
+      padding: '12px',
+      borderRadius: '10px',
+      background: '#1f2d3d',
+      boxShadow: '0 4px 12px rgba(0,0,0,0.35)',
+      fontFamily: 'sans-serif',
+      width: '200px'
+    });
+
+    const title = document.createElement('div');
+    title.textContent = 'Set loan overdue';
+    Object.assign(title.style, { color: '#fff', fontSize: '13px', fontWeight: '600', marginBottom: '2px' });
+
+    const loanInput = document.createElement('input');
+    loanInput.type = 'text';
+    loanInput.placeholder = 'Loan ID';
+    const daysInput = document.createElement('input');
+    daysInput.type = 'text';
+    daysInput.placeholder = 'Overdue days';
+    [loanInput, daysInput].forEach((input) => {
+      Object.assign(input.style, {
+        padding: '6px 8px',
+        borderRadius: '6px',
+        border: '1px solid #3a4a5d',
+        fontSize: '13px',
+        outline: 'none'
+      });
+    });
+
+    const submit = document.createElement('button');
+    submit.textContent = 'Run overdue cron';
+    Object.assign(submit.style, {
+      padding: '8px',
+      borderRadius: '6px',
+      border: 'none',
+      cursor: 'pointer',
+      color: '#fff',
+      fontSize: '13px',
+      fontWeight: '600',
+      background: '#d35400'
+    });
+
+    submit.addEventListener('click', () => {
+      const loanId = loanInput.value.trim();
+      const days = daysInput.value.trim();
+      if (!loanId || !days) {
+        toast('Enter Loan ID and days', true);
+        return;
+      }
+      submit.disabled = true;
+      submit.textContent = 'Running…';
+      setLoanOverdue(loanId, days)
+        .then((currentDate) => toast('Overdue cron started (date ' + currentDate + ')'))
+        .catch((err) => {
+          console.error('[Autofill] Overdue cron error:', err);
+          toast('Error: ' + (err && err.message ? err.message : err), true);
+        })
+        .finally(() => {
+          submit.disabled = false;
+          submit.textContent = 'Run overdue cron';
+        });
+    });
+
+    panel.append(title, loanInput, daysInput, submit);
+    document.body.appendChild(panel);
+  }
+
+  function removeOverduePanel() {
+    const panel = document.getElementById('erp-overdue-panel');
+    if (panel) panel.remove();
+  }
+
+  function isRecoveryHost() {
+    const host = location.hostname;
+    if (isErpHost()) return false;
+    const isLocal = host.includes('localhost') || host.endsWith('.docker');
+    const isKgProduct = /(^|\.)(doke|fino)\.kg$/i.test(host);
+    if (!isLocal && !isKgProduct) return false;
+    if (isKgProduct && !/(^|\.)staging\d*\.(doke|fino)\.kg$/i.test(host)) return false;
+    return /\/login/.test(location.pathname);
+  }
+
+  function injectRecoveryPanel() {
+    if (document.getElementById('password-recovery-panel')) return;
+    const panel = document.createElement('div');
+    panel.id = 'password-recovery-panel';
+    Object.assign(panel.style, {
+      position: 'fixed',
+      bottom: '20px',
+      left: '20px',
+      zIndex: '2147483647',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '6px',
+      padding: '12px',
+      borderRadius: '10px',
+      background: '#1f2d3d',
+      boxShadow: '0 4px 12px rgba(0,0,0,0.35)',
+      fontFamily: 'sans-serif',
+      width: '220px'
+    });
+
+    const title = document.createElement('div');
+    Object.assign(title.style, { color: '#fff', fontSize: '13px', fontWeight: '600', marginBottom: '2px' });
+
+    const emailInput = document.createElement('input');
+    emailInput.type = 'email';
+    emailInput.placeholder = 'Email';
+    Object.assign(emailInput.style, {
+      padding: '6px 8px',
+      borderRadius: '6px',
+      border: '1px solid #3a4a5d',
+      fontSize: '13px',
+      outline: 'none'
+    });
+
+    const submit = document.createElement('button');
+    submit.textContent = 'Recover password';
+    Object.assign(submit.style, {
+      padding: '8px',
+      borderRadius: '6px',
+      border: 'none',
+      cursor: 'pointer',
+      color: '#fff',
+      fontSize: '13px',
+      fontWeight: '600',
+      background: '#2d6cdf'
+    });
+
+    submit.addEventListener('click', () => {
+      const email = emailInput.value.trim();
+      if (!email) {
+        toast('Enter email', true);
+        return;
+      }
+      submit.disabled = true;
+      submit.style.opacity = '0.6';
+      submit.textContent = 'Recovering…';
+      const loader = toast('Recovering password…', false, true);
+      runPasswordRecovery(email)
+        .then(({ code, submitted }) => {
+          loader.remove();
+          toast(submitted ? 'Code ' + code + ' entered, submitting…' : 'Code: ' + code + ' (login form not found)');
+        })
+        .catch((err) => {
+          loader.remove();
+          console.error('[Autofill] Password recovery error:', err);
+          toast('Error: ' + (err && err.message ? err.message : err), true);
+        })
+        .finally(() => {
+          submit.disabled = false;
+          submit.style.opacity = '1';
+          submit.textContent = 'Recover password';
+        });
+    });
+
+    panel.append(title, emailInput, submit);
+    document.body.appendChild(panel);
+  }
+
+  function removeRecoveryPanel() {
+    const panel = document.getElementById('password-recovery-panel');
+    if (panel) panel.remove();
+  }
+
   function syncButton() {
     if (getAction()) injectButton();
     else removeButton();
     if (isErpPaymentAdd()) wirePaymentSaveButton();
     if (isErpHost()) injectPaymentPanel();
     else removePaymentPanel();
+    if (isErpHost()) injectOverduePanel();
+    else removeOverduePanel();
+    if (isRecoveryHost()) injectRecoveryPanel();
+    else removeRecoveryPanel();
+    autoFillChangePassword();
   }
 
   setInterval(syncButton, 1000);
